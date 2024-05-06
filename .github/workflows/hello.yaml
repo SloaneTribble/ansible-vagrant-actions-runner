@@ -1,0 +1,14 @@
+name: Hello Ansible
+
+on: [push]
+
+jobs:
+    build:
+        runs-on: [self-hosted, Linux]
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Echo runner name
+              run: "echo 'Hello from runner: ${{ runner.name }}!'"
