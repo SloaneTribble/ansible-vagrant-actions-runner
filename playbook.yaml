@@ -12,34 +12,43 @@
     - name: Update system packages
       apt:
         update_cache: yes
+        cache_valid_time: 86400  # Ensures cache is only updated if it's older than a day
 
     - name: Install necessary packages
       apt:
         name:
           - curl
           - jq
+    
+    - name: Check if runner package is already downloaded
+      stat:
+        path: "/tmp/actions-runner.tar.gz"
+      register: runner_package
+
 
     - name: Download runner package
       get_url:
         url: "https://github.com/actions/runner/releases/download/v2.316.0/actions-runner-linux-arm64-2.316.0.tar.gz"
         dest: "/tmp/actions-runner.tar.gz"
+      when: not runner_package.stat.exists
 
     - name: Create runner directory
       file:
         path: "/home/{{ ansible_user }}/actions-runner"
         state: directory
+        mode: '755'  # Setting mode here to avoid separate permission task if possible
     
-    - name: Change permissions of actions-runner directory
-      file:
-        path: "/home/{{ ansible_user }}/actions-runner"
-        mode: '755'
-        recurse: yes
+    # - name: Change permissions of actions-runner directory
+    #   file:
+    #     path: "/home/{{ ansible_user }}/actions-runner"
+    #     mode: '755'
+    #     recurse: yes
 
     - name: Extract runner package
       unarchive:
         src: "/tmp/actions-runner.tar.gz"
         dest: "/home/{{ ansible_user }}/actions-runner"
-        mode: '777'
+        # mode: '777'
         remote_src: yes
 
     - name: Check if runner is already configured
@@ -59,3 +68,12 @@
       command: "./run.sh"
       args:
         chdir: "/home/{{ ansible_user }}/actions-runner"
+
+    # alternative to 'Run Runner' depends on having a service file via systemd to keep runner running
+    # - name: Ensure runner is running as a service
+    #   systemd:
+    #     name: github-runner
+    #     enabled: yes
+    #     state: started
+    #     user: "{{ ansible_user }}"
+    #   when: runner_status.stat.exists
